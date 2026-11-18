@@ -105,7 +105,7 @@
     function toggleMode() {
       if (!isTeacher) {
         const pass = prompt("Nhập mật khẩu Giáo viên (mặc định: 1234):");
-        if (pass !== "1234") return alert("Sai mật khẩu!");
+        if (pass !== "admin") return alert("Sai mật khẩu!");
       }
       isTeacher = !isTeacher;
       document.getElementById('studentView').classList.toggle('hidden', isTeacher);
