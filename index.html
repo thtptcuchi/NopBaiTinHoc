@@ -68,6 +68,9 @@
           <div class="flex gap-2">
             <select id="statClass" onchange="renderStats()" class="border rounded-lg p-2 font-medium"></select>
             <select id="statWeek" onchange="renderStats()" class="border rounded-lg p-2 font-medium"></select>
+            <button id="refreshBtn" onclick="refreshStats()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border px-3 py-2 rounded-lg text-sm font-semibold">
+            🔄 Làm mới
+          </button>
           </div>
         </div>
 
@@ -262,6 +265,32 @@ async function deleteSubmission(className, studentName, weekName) {
       }
     }
     fetchData();
+    
+    async function refreshStats() {
+  const btn = document.getElementById('refreshBtn');
+  const currentClass = document.getElementById('statClass').value;
+  const currentWeek = document.getElementById('statWeek').value;
+
+  btn.disabled = true;
+  btn.innerText = "⏳ Đang tải...";
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    appData = await res.json();
+    populateSelects();
+
+    if (currentClass && appData.classes[currentClass]) {
+      document.getElementById('statClass').value = currentClass;
+    }
+    if (currentWeek && appData.weeks.includes(currentWeek)) {
+      document.getElementById('statWeek').value = currentWeek;
+    }
+    renderStats();
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "🔄 Làm mới";
+  }
+}
   </script>
 </body>
 </html>
