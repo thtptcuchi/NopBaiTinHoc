@@ -197,7 +197,7 @@
           const result = await res.json();
           if (result.status === 'success') {
             statusMsg.className = "mt-3 text-center font-bold text-green-600";
-            statusMsg.innerText = `Nộp bài thành công! Thầy/Cô đã nhận được tệp của em.`;
+            statusMsg.innerText = `Nộp bài thành công! Thầy Nguyên đã nhận được tệp của em.`;
             fileInput.value = "";
             await fetchData();
           } else {
