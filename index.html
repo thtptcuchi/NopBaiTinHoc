@@ -233,38 +233,41 @@
           </div>
           <div class="flex gap-2">
             <a href="${s.link}" target="_blank" class="bg-blue-50 text-blue-600 px-3 py-1 rounded border border-blue-200 text-xs font-medium hover:bg-blue-100">Mở Drive</a>
-            <button onclick="deleteSubmission('${s.className}', '${s.studentName}', '${s.week}')" class="bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200 text-xs font-medium hover:bg-red-100">Xóa bài</button>
+            <button onclick="deleteSubmission('${s.className}', '${s.studentName}', '${s.week}', '${s.link}', '${s.time}')" class="bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200 text-xs font-medium hover:bg-red-100">
+  Xóa bài
+</button>
           </div>
         </li>`
       ).join('');
     }
-async function deleteSubmission(className, studentName, weekName) {
-      if (!confirm(`Thầy/Cô có chắc chắn muốn xóa bài nộp của học sinh [${className}] ${studentName} trong ${weekName} không?\n(File trên Google Drive và lịch sử thống kê sẽ bị xóa vĩnh viễn)`)) {
-        return;
-      }
+async function deleteSubmission(className, studentName, weekName, fileLink = '', submitTime = '') {
+  if (!confirm(`Xóa bài nộp này của [${className}] ${studentName} (${weekName})?\nFile trên Google Drive và dòng thống kê này sẽ bị xóa.`)) {
+    return;
+  }
 
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'deleteSubmission',
-            className,
-            studentName,
-            weekName
-          })
-        });
-        const result = await res.json();
-        if (result.status === 'success') {
-          alert("Đã xóa bài nộp và file thành công! Học sinh có thể nộp lại bài mới.");
-          await fetchData(); // Tải lại dữ liệu mới nhất
-        } else {
-          throw new Error(result.message);
-        }
-      } catch (e) {
-        alert("Lỗi khi xóa: " + e.message);
-      }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'deleteSubmission',
+        className,
+        studentName,
+        weekName,
+        fileLink,
+        submitTime
+      })
+    });
+    const result = await res.json();
+    if (result.status === 'success') {
+      alert("Đã xóa bài nộp này thành công!");
+      await fetchData();
+    } else {
+      throw new Error(result.message);
     }
-    fetchData();
+  } catch (e) {
+    alert("Lỗi khi xóa: " + e.message);
+  }
+}
     
     async function refreshStats() {
   const btn = document.getElementById('refreshBtn');
