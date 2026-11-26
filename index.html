@@ -43,7 +43,7 @@
       </div>
 
       <button onclick="submitHomework()" id="submitBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl text-lg shadow transition">
-        NỘP BÀI
+        NỘP BÀI LÊN GOOGLE DRIVE
       </button>
       <p id="statusMsg" class="mt-3 text-center font-medium"></p>
     </div>
@@ -54,7 +54,7 @@
       <div class="bg-white p-6 rounded-2xl shadow-sm">
         <h2 class="text-lg font-bold text-slate-800 mb-3">Tạo thư mục tuần mới (Tự động tạo trên Google Drive)</h2>
         <div class="flex gap-3">
-          <input type="text" id="newWeekInput" placeholder="VD: TUAN 01" class="flex-1 border rounded-xl p-3 font-medium">
+          <input type="text" id="newWeekInput" placeholder="VD: TUAN 12" class="flex-1 border rounded-xl p-3 font-medium">
           <button onclick="createNewWeek()" id="createWeekBtn" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700">
             + Tạo Thư Mục
           </button>
@@ -65,12 +65,12 @@
       <div class="bg-white p-6 rounded-2xl shadow-sm">
         <div class="flex flex-wrap gap-4 justify-between items-center mb-4">
           <h2 class="text-lg font-bold text-slate-800">Thống kê tình hình nộp bài</h2>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2 items-center">
             <select id="statClass" onchange="renderStats()" class="border rounded-lg p-2 font-medium"></select>
             <select id="statWeek" onchange="renderStats()" class="border rounded-lg p-2 font-medium"></select>
             <button id="refreshBtn" onclick="refreshStats()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border px-3 py-2 rounded-lg text-sm font-semibold">
-            🔄 Làm mới
-          </button>
+              🔄 Làm mới
+            </button>
           </div>
         </div>
 
@@ -89,70 +89,117 @@
   </div>
 
   <script>
-    // ⚠️ HÃY DÁN LINK APPS SCRIPT CỦA THẦY VÀO ĐÂY:
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqPTLokqtpXqWezJp95fNKljI-YVsnqFOHVNXLVV_WewfvDO4ZJk2I0azFlvDXMdPQNg/exec';
-
+    // ⚠️ HÃY DÁN LINK APPS SCRIPT CỦA THẦY VÀO DƯỚI ĐÂY:
+   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqPTLokqtpXqWezJp95fNKljI-YVsnqFOHVNXLVV_WewfvDO4ZJk2I0azFlvDXMdPQNg/exec';
     let appData = { classes: {}, weeks: [], submissions: [] };
     let isTeacher = false;
 
     async function fetchData() {
+      const currentClass = document.getElementById("statClass").value;
+      const currentWeek = document.getElementById("statWeek").value;
+      const currentStuClass = document.getElementById("stuClass").value;
+      const currentStuName = document.getElementById("stuName").value;
+      const currentStuWeek = document.getElementById("stuWeek").value;
+
       try {
         const res = await fetch(APPS_SCRIPT_URL);
-        appData = await res.json();
-        populateSelects();
+        const data = await res.json();
+        if (data && data.classes) {
+          appData = {
+            classes: data.classes || {},
+            weeks: data.weeks || [],
+            submissions: data.submissions || []
+          };
+          populateSelects(currentClass, currentWeek, currentStuClass, currentStuName, currentStuWeek);
+        }
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
+      }
+    }
+
+    async function refreshStats() {
+      const btn = document.getElementById("refreshBtn");
+      btn.disabled = true;
+      btn.innerText = "⏳ Đang tải...";
+      try {
+        await fetchData();
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔄 Làm mới";
       }
     }
 
     function toggleMode() {
       if (!isTeacher) {
         const pass = prompt("Nhập mật khẩu Giáo viên (mặc định: 1234):");
-        if (pass !== "admin") return alert("Sai mật khẩu!");
+        if (pass !== "1234") return alert("Sai mật khẩu!");
       }
       isTeacher = !isTeacher;
-      document.getElementById('studentView').classList.toggle('hidden', isTeacher);
-      document.getElementById('teacherView').classList.toggle('hidden', !isTeacher);
-      document.getElementById('modeBtn').innerText = isTeacher ? "Về Trang Học Sinh" : "Góc Giáo Viên";
-      if (isTeacher) renderStats();
+      document.getElementById("studentView").classList.toggle("hidden", isTeacher);
+      document.getElementById("teacherView").classList.toggle("hidden", !isTeacher);
+      document.getElementById("modeBtn").innerText = isTeacher ? "Về Trang Học Sinh" : "Góc Giáo Viên";
+      if (isTeacher) {
+        fetchData();
+      }
     }
 
-    function populateSelects() {
+    function populateSelects(keepStatClass = "", keepStatWeek = "", keepStuClass = "", keepStuName = "", keepStuWeek = "") {
       const classNames = Object.keys(appData.classes);
-      const stuClass = document.getElementById('stuClass');
-      const statClass = document.getElementById('statClass');
-      stuClass.innerHTML = statClass.innerHTML = classNames.map(c => `<option value="${c}">${c}</option>`).join('');
+      const stuClassEl = document.getElementById("stuClass");
+      const statClassEl = document.getElementById("statClass");
 
-      const weekOptions = appData.weeks.map(w => `<option value="${w}">${w}</option>`).join('');
-      document.getElementById('stuWeek').innerHTML = weekOptions || '<option value="">Chưa có tuần nào</option>';
-      document.getElementById('statWeek').innerHTML = weekOptions;
+      const classOptions = classNames.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("");
+      stuClassEl.innerHTML = classOptions;
+      statClassEl.innerHTML = classOptions;
 
-      renderStudentList();
+      if (keepStuClass && classNames.includes(keepStuClass)) stuClassEl.value = keepStuClass;
+      if (keepStatClass && classNames.includes(keepStatClass)) statClassEl.value = keepStatClass;
+
+      const weekOptions = appData.weeks.map(w => `<option value="${escapeAttr(w)}">${escapeHtml(w)}</option>`).join("");
+      const stuWeekEl = document.getElementById("stuWeek");
+      const statWeekEl = document.getElementById("statWeek");
+
+      stuWeekEl.innerHTML = weekOptions || '<option value="">Chưa có tuần nào</option>';
+      statWeekEl.innerHTML = weekOptions || '<option value="">Chưa có tuần nào</option>';
+
+      if (keepStuWeek && appData.weeks.includes(keepStuWeek)) stuWeekEl.value = keepStuWeek;
+      if (keepStatWeek && appData.weeks.includes(keepStatWeek)) statWeekEl.value = keepStatWeek;
+
+      renderStudentList(keepStuName);
       renderStats();
     }
 
-    function renderStudentList() {
-      const cls = document.getElementById('stuClass').value;
+    function renderStudentList(keepName = "") {
+      const cls = document.getElementById("stuClass").value;
       const students = appData.classes[cls] || [];
-      document.getElementById('stuName').innerHTML = students.map(s => `<option value="${s}">${s}</option>`).join('');
+      const stuNameEl = document.getElementById("stuName");
+      stuNameEl.innerHTML = students.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join("");
+      if (keepName && students.includes(keepName)) {
+        stuNameEl.value = keepName;
+      }
     }
 
     async function createNewWeek() {
-      const weekName = document.getElementById('newWeekInput').value.trim();
-      if (!weekName) return alert("Thầy/Cô hãy nhập tên tuần (VD: TUAN 01)");
-      
-      const btn = document.getElementById('createWeekBtn');
+      const weekName = document.getElementById("newWeekInput").value.trim();
+      if (!weekName) return alert("Thầy/Cô hãy nhập tên tuần (VD: TUAN 12)");
+
+      const btn = document.getElementById("createWeekBtn");
       btn.disabled = true;
       btn.innerText = "Đang tạo trên Drive...";
 
       try {
-        await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'addWeek', weekName })
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "addWeek", weekName })
         });
-        document.getElementById('newWeekInput').value = "";
-        alert(`Đã tạo thành công thư mục "${weekName}" trên Google Drive!`);
-        await fetchData();
+        const result = await res.json();
+        if (result.status === "success") {
+          document.getElementById("newWeekInput").value = "";
+          alert(`Đã tạo thành công thư mục "${weekName}" trên Google Drive!`);
+          await fetchData();
+        } else {
+          throw new Error(result.message || "Không tạo được tuần");
+        }
       } catch (e) {
         alert("Lỗi khi tạo tuần: " + e.message);
       } finally {
@@ -161,139 +208,144 @@
       }
     }
 
-    async function submitHomework() {
-      const weekName = document.getElementById('stuWeek').value;
-      const className = document.getElementById('stuClass').value;
-      const studentName = document.getElementById('stuName').value;
-      const fileInput = document.getElementById('stuFile');
-      const statusMsg = document.getElementById('statusMsg');
-      const btn = document.getElementById('submitBtn');
+    function submitHomework() {
+      const weekName = document.getElementById("stuWeek").value;
+      const className = document.getElementById("stuClass").value;
+      const studentName = document.getElementById("stuName").value;
+      const fileInput = document.getElementById("stuFile");
+      const statusMsg = document.getElementById("statusMsg");
+      const btn = document.getElementById("submitBtn");
 
-      if (!weekName || !fileInput.files[0]) return alert("Em hãy chọn Thư mục Tuần và chọn Tệp bài làm nhé!");
+      if (!weekName || !fileInput.files[0]) {
+        return alert("Em hãy chọn Thư mục Tuần và chọn Tệp bài làm nhé!");
+      }
 
       const file = fileInput.files[0];
       btn.disabled = true;
-      btn.innerText = "Đang nộp bài cho Thầy, vui lòng chờ tí nhé...";
+      btn.innerText = "Đang tải bài lên Google Drive...";
       statusMsg.innerText = "";
 
       const reader = new FileReader();
-      reader.readAsDataURL(file);
       reader.onload = async function () {
-        const base64Data = reader.result.split(',')[1];
+        const base64Data = reader.result.split(",")[1];
         const payload = {
           className,
           studentName,
           weekName,
           fileName: file.name,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType: file.type || "application/octet-stream",
           fileData: base64Data
         };
 
         try {
           const res = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify(payload)
           });
           const result = await res.json();
-          if (result.status === 'success') {
+          if (result.status === "success") {
             statusMsg.className = "mt-3 text-center font-bold text-green-600";
-            statusMsg.innerText = `Nộp bài thành công! Thầy Nguyên đã nhận được tệp của em.`;
+            statusMsg.innerText = "Nộp bài thành công! Thầy/Cô đã nhận được tệp của em.";
             fileInput.value = "";
             await fetchData();
           } else {
-            throw new Error(result.message);
+            throw new Error(result.message || "Nộp bài thất bại");
           }
         } catch (e) {
           statusMsg.className = "mt-3 text-center font-bold text-red-600";
           statusMsg.innerText = "Lỗi: " + e.message;
         } finally {
           btn.disabled = false;
-          btn.innerText = "NỘP BÀI";
+          btn.innerText = "NỘP BÀI LÊN GOOGLE DRIVE";
         }
       };
+      reader.readAsDataURL(file);
     }
 
     function renderStats() {
-      const cls = document.getElementById('statClass').value;
-      const selectedWeek = document.getElementById('statWeek').value;
+      const cls = document.getElementById("statClass").value;
+      const selectedWeek = document.getElementById("statWeek").value;
       const students = appData.classes[cls] || [];
-      
+
       const subs = appData.submissions.filter(s => s.className === cls && s.week === selectedWeek);
       const doneNames = subs.map(s => s.studentName);
       const missing = students.filter(s => !doneNames.includes(s));
 
-      document.getElementById('missingCount').innerText = missing.length;
-      document.getElementById('missingList').innerHTML = missing.map(s => `<li>• ${s}</li>`).join('') || '<li>Tất cả học sinh lớp này đã nộp đủ!</li>';
+      document.getElementById("missingCount").innerText = missing.length;
+      document.getElementById("missingList").innerHTML =
+        missing.map(s => `<li>• ${escapeHtml(s)}</li>`).join("") ||
+        "<li>Tất cả học sinh lớp này đã nộp đủ!</li>";
 
-      document.getElementById('doneCount').innerText = subs.length;
-      document.getElementById('doneList').innerHTML = subs.map(s =>
-        `<li class="flex justify-between items-center bg-white p-2 rounded border mb-2">
+      document.getElementById("doneCount").innerText = subs.length;
+      document.getElementById("doneList").innerHTML = subs.map(s => {
+        const safeClass = encodeURIComponent(s.className);
+        const safeName = encodeURIComponent(s.studentName);
+        const safeWeek = encodeURIComponent(s.week);
+        const safeLink = encodeURIComponent(s.link || "");
+        const safeTime = encodeURIComponent(s.time || "");
+
+        return `<li class="flex justify-between items-center gap-2 bg-white p-2 rounded border">
           <div>
-            ✔ <b>${s.studentName}</b> <span class="text-xs text-slate-500">(${s.time})</span>
+            ✔ <b>${escapeHtml(s.studentName)}</b>
+            <span class="text-xs text-slate-500">(${escapeHtml(s.time)})</span>
+            ${s.fileName ? `<div class="text-xs text-slate-400">${escapeHtml(s.fileName)}</div>` : ""}
           </div>
-          <div class="flex gap-2">
-            <a href="${s.link}" target="_blank" class="bg-blue-50 text-blue-600 px-3 py-1 rounded border border-blue-200 text-xs font-medium hover:bg-blue-100">Mở Drive</a>
-            <button onclick="deleteSubmission('${s.className}', '${s.studentName}', '${s.week}', '${s.link}', '${s.time}')" class="bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200 text-xs font-medium hover:bg-red-100">
-  Xóa bài
-</button>
+          <div class="flex gap-2 shrink-0">
+            <a href="${escapeAttr(s.link)}" target="_blank" class="bg-blue-50 text-blue-600 px-3 py-1 rounded border border-blue-200 text-xs font-medium hover:bg-blue-100">Mở Drive</a>
+            <button onclick="deleteSubmission('${safeClass}', '${safeName}', '${safeWeek}', '${safeLink}', '${safeTime}')" class="bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200 text-xs font-medium hover:bg-red-100">Xóa bài</button>
           </div>
-        </li>`
-      ).join('');
+        </li>`;
+      }).join("");
     }
-async function deleteSubmission(className, studentName, weekName, fileLink = '', submitTime = '') {
-  if (!confirm(`Xóa bài nộp này của [${className}] ${studentName} (${weekName})?\nFile trên Google Drive và dòng thống kê này sẽ bị xóa.`)) {
-    return;
-  }
 
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'deleteSubmission',
-        className,
-        studentName,
-        weekName,
-        fileLink,
-        submitTime
-      })
-    });
-    const result = await res.json();
-    if (result.status === 'success') {
-      alert("Đã xóa bài nộp này thành công!");
-      await fetchData();
-    } else {
-      throw new Error(result.message);
+    async function deleteSubmission(encodedClass, encodedName, encodedWeek, encodedLink, encodedTime) {
+      const className = decodeURIComponent(encodedClass);
+      const studentName = decodeURIComponent(encodedName);
+      const weekName = decodeURIComponent(encodedWeek);
+      const fileLink = decodeURIComponent(encodedLink);
+      const submitTime = decodeURIComponent(encodedTime);
+
+      if (!confirm(`Xóa bài nộp này (${submitTime}) của [${className}] ${studentName} trong ${weekName}?\nFile này trên Google Drive và dòng thống kê tương ứng sẽ bị xóa.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "deleteSubmission",
+            className,
+            studentName,
+            weekName,
+            fileLink,
+            submitTime
+          })
+        });
+        const result = await res.json();
+        if (result.status === "success") {
+          alert("Đã xóa bài nộp này thành công!");
+          await fetchData();
+        } else {
+          throw new Error(result.message || "Xóa thất bại");
+        }
+      } catch (e) {
+        alert("Lỗi khi xóa: " + e.message);
+      }
     }
-  } catch (e) {
-    alert("Lỗi khi xóa: " + e.message);
-  }
-}
-    
-    async function refreshStats() {
-  const btn = document.getElementById('refreshBtn');
-  const currentClass = document.getElementById('statClass').value;
-  const currentWeek = document.getElementById('statWeek').value;
 
-  btn.disabled = true;
-  btn.innerText = "⏳ Đang tải...";
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL);
-    appData = await res.json();
-    populateSelects();
-
-    if (currentClass && appData.classes[currentClass]) {
-      document.getElementById('statClass').value = currentClass;
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
     }
-    if (currentWeek && appData.weeks.includes(currentWeek)) {
-      document.getElementById('statWeek').value = currentWeek;
+
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/'/g, "&#39;");
     }
-    renderStats();
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "🔄 Làm mới";
-  }
-}
+
+    fetchData();
   </script>
 </body>
 </html>
